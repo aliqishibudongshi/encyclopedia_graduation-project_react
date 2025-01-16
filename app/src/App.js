@@ -1,15 +1,14 @@
 import { HashRouter } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './redux/store';
 import IndexRouter from './router/IndexRouter';
 import theme from './theme';
+import Loading from "./components/Loading"
 
 const App = () => {
   return (
     <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
         <HashRouter>
           <ConfigProvider
             theme={{
@@ -20,7 +19,6 @@ const App = () => {
             <IndexRouter />
           </ConfigProvider>
         </HashRouter>
-      </PersistGate>
     </Provider>
   );
 };
