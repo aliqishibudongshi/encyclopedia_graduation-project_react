@@ -19,7 +19,7 @@ export const privateRoutes = [
         path: '/dashboard',
         element: <Dashboard />,
         children: [
-            { path: 'illustrations', element: <Illustration /> }, // Notice no leading slash
+            { path: 'illustrations', element: <Illustration /> },
             { path: 'community', element: <Community /> },
             { path: 'profile', element: <Profile /> },
         ],
