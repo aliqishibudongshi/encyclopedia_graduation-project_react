@@ -24,7 +24,7 @@ const LoadingContainer = styled.div`
 const Loading = () => {
     return (
         <LoadingContainer>
-            <div className="loading-spinner"></div>
+            <div className="loading-spinner">Loading...</div>
         </LoadingContainer>
     );
 };
