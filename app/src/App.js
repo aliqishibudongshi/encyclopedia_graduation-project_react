@@ -1,10 +1,9 @@
 import { HashRouter } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import { Provider } from 'react-redux';
-import { store, persistor } from './redux/store';
+import { store } from './redux/store';
 import IndexRouter from './router/IndexRouter';
 import theme from './theme';
-import Loading from "./components/Loading"
 
 const App = () => {
   return (

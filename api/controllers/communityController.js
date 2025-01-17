@@ -1,5 +1,6 @@
 const Community = require('../models/Community');
 
+// 获取帖子
 exports.getAllPosts = async (req, res) => {
     try {
         const posts = await Community.find();
@@ -34,7 +35,7 @@ exports.likePost = async (req, res) => {
         const username = req.body.data.username;
 
         const post = await Community.findById(postId);
-        
+
         const existingLike = post.likes.find(like => like.username.toString() === username.toString());
 
         if (existingLike) {
@@ -72,7 +73,7 @@ exports.deletePost = async (req, res) => {
     try {
         const postId = req.params.id;
         await Community.findByIdAndDelete(postId);
-        res.json({ status: 'success', message: 'Post deleted' });
+        res.json({ status: 'success', message: '状态删除成功！' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to delete post' });
     }
@@ -83,11 +84,24 @@ exports.updatePost = async (req, res) => {
     try {
         const postId = req.params.id;
         const { content } = req.body;
+        const newImageFiles = req.files || [];
         const post = await Community.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({ error: 'Post not found' });
+        }
+
         post.content = content;
+
+        // 处理新上传的图片路径
+        const newImagePaths = newImageFiles.map(file => file.path);
+        // 合并原有图片路径和新上传的图片路径
+        post.imagePath = [...post.imagePath, ...newImagePaths];
+
         await post.save();
         res.json(post);
     } catch (error) {
+        console.error("Error updating post:", error);
         res.status(500).json({ error: 'Failed to update post' });
     }
 };

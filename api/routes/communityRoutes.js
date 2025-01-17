@@ -23,6 +23,6 @@ router.post('/create-post', upload.array('image'), createPost);
 router.post('/like/:id', likePost);
 router.post('/comment/:id', commentPost);
 router.delete('/delete/:id', deletePost);
-router.put('/update/:id', updatePost);
+router.put('/update/:id', upload.array('image'), updatePost);
 
 module.exports = router;
