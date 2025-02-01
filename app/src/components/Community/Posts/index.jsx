@@ -264,7 +264,7 @@ const StyledCommentDrawer = styled(Drawer)`
     }
 `;
 
-export default function Posts() {
+export default function Posts({ showOnlyUserPosts, currentUser }) {
     const [posts, setPosts] = useState([]);
     const [isOpenComment, setIsOpenComment] = useState(false);
     const [comment, setComment] = useState(null);
@@ -282,18 +282,21 @@ export default function Posts() {
     // 获取帖子数据
     const fetchPosts = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/community`);
+            const url = showOnlyUserPosts
+                ? `${API_BASE_URL}/api/community?username=${currentUser}`
+                : `${API_BASE_URL}/api/community`;
+
+            const response = await fetch(url);
             let data = await response.json();
-            // Sort posts by createdAt in descending order
-            data = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             setPosts(data);
         } catch (error) {
             console.error("Failed to fetch posts", error);
         }
     };
+    // 更新useEffect依赖
     useEffect(() => {
         fetchPosts();
-    }, []);
+    }, [showOnlyUserPosts, currentUser]);
 
     // 点赞帖子
     const handleLike = async (id) => {

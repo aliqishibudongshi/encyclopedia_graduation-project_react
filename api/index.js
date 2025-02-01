@@ -7,13 +7,14 @@ const communityRoutes = require('./routes/communityRoutes');
 const userRoutes = require('./routes/userRoutes');
 const illustrationCategoryRoutes = require('./routes/illustrationCategoryRoutes');
 const gameRoutes = require('./routes/gameRoutes');
+const progressRoutes = require('./routes/progressRoutes');
 
 const app = express();
 const PORT = 8080;
 
 // static assets
 // 为seed/images目录设置静态资源访问路径为/images
-app.use('/images', express.static(path.join(__dirname,'seed/images')));
+app.use('/images', express.static(path.join(__dirname, 'seed/images')));
 // 为public/uploads目录设置静态资源访问路径
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
@@ -34,6 +35,7 @@ app.use('/api/community', communityRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/category', illustrationCategoryRoutes);
 app.use('/api/game', gameRoutes);
+app.use('/api/progress', progressRoutes);
 
 // Default route
 app.get('/', (req, res) => {

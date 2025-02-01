@@ -3,7 +3,13 @@ const Community = require('../models/Community');
 // 获取帖子
 exports.getAllPosts = async (req, res) => {
     try {
-        const posts = await Community.find();
+        const { username } = req.query;
+        const query = username ? { username } : {};
+
+        const posts = await Community.find(query)
+            .sort({ createdAt: -1 })
+            .populate('comments');
+
         res.json(posts);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch posts' });

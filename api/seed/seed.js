@@ -25,11 +25,12 @@ const seedData = async () => {
         wuKongCategories.forEach((category) => (category.gameId = gameDocs[0]._id));
         animalCategories.forEach((category) => (category.gameId = gameDocs[1]._id));
 
+        // 插入分类
         const wuKongCategoryDocs = await IllustrationCategory.insertMany(wuKongCategories);
         const animalCategoryDocs = await IllustrationCategory.insertMany(animalCategories);
+        const categories = [...wuKongCategoryDocs, ...animalCategoryDocs];
 
         // Assign category IDs to illustrations
-        const categories = [...wuKongCategoryDocs, ...animalCategoryDocs];
         const illustrationGroups = [
             armorIllustrations,
             boozeIllustrations,
@@ -43,13 +44,28 @@ const seedData = async () => {
             weaponIllustrations,
         ];
 
+        // 按分类顺序分配插图
         illustrationGroups.forEach((group, index) => {
-            group.forEach((illustration) => {
-                illustration.categoryId = categories[index % categories.length]._id;
+            const targetCategory = categories[index % categories.length];
+            group.forEach(illustration => {
+                delete illustration.collected;
+                illustration.collectedUsers = [];
+                illustration.categoryId = targetCategory._id;
             });
         });
 
+        // 插入所有插图数据
         await IllustrationList.insertMany(illustrationGroups.flat());
+
+        // 更新分类的itemCount（必须在插入插图之后）
+        for (const category of categories) {
+            const count = await IllustrationList.countDocuments({
+                categoryId: category._id
+            });
+            await IllustrationCategory.findByIdAndUpdate(category._id, {
+                itemCount: count
+            });
+        }
 
         console.log('Seed data added successfully!');
         process.exit();

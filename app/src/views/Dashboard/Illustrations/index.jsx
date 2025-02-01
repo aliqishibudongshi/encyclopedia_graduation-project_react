@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSelector } from "react-redux";
 import { Tabs, Table, Spin, Switch, message } from 'antd';
 import axios from 'axios';
 import { SearchOutlined } from "@ant-design/icons";
-import {API_BASE_URL} from "../../../config";
+import { API_BASE_URL } from "../../../config";
 import "./index.css";
 
 const Illustrations = () => {
@@ -14,34 +15,37 @@ const Illustrations = () => {
     const [activeKey, setActiveKey] = useState(null);
     const inputRef = useRef();
     const [messageApi, contextHolder] = message.useMessage();
+    const username = useSelector(state => state.auth.username);
 
     // Fetch categories from the API
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const gameId = '674f2fdcb8f5697e726263d4'; // ID for "Black Myth Wukong"
-                const response = await axios.get(`${API_BASE_URL}/api/category`, {
-                    params: { gameId }, // Pass gameId as a query parameter
+                // 1. 先获取游戏ID
+                const gameResponse = await axios.get(`${API_BASE_URL}/api/game`, {
+                    params: { name: '黑神话悟空' }
                 });
-                const categoriesData = response.data;
+                const gameId = gameResponse.data[0]?._id;
 
-                // Transform the data to fit the tab structure
-                const transformedData = categoriesData.map((category) => ({
+                // 2. 获取分类
+                const response = await axios.get(`${API_BASE_URL}/api/category`, {
+                    params: { gameId }
+                });
+
+                // 3. 直接使用原始分类数据
+                setCategories(response.data.map(category => ({
                     key: category._id,
                     tab: category.name,
-                }));
+                    originalCategory: category // 保留原始数据
+                })));
 
-                setCategories(transformedData);
-                if (transformedData.length > 0) {
-                    setActiveKey(transformedData[0].key);
+                if (response.data.length > 0) {
+                    setActiveKey(response.data[0]._id);
                 }
                 setLoadingCategories(false);
             } catch (error) {
                 console.error('Error fetching categories:', error);
-                messageApi.open({
-                    type: 'error',
-                    content: '获取分类失败',
-                });
+                messageApi.open({ type: 'error', content: '获取分类失败' });
                 setLoadingCategories(false);
             }
         };
@@ -67,7 +71,9 @@ const Illustrations = () => {
                     name: item.name,
                     image: item.image,
                     description: item.description,
-                    collected: item.collected,
+                    // 根据collectedUsers判断是否收藏
+                    collected: item.collectedUsers.includes(username),
+                    collectedUsers: item.collectedUsers
                 }));
                 setListData((prev) => ({ ...prev, [activeKey]: illustrations }));
                 setOriginalListData((prev) => ({ ...prev, [activeKey]: illustrations })); // Store original data
@@ -83,7 +89,7 @@ const Illustrations = () => {
         };
 
         fetchIllustrations();
-    }, [activeKey, listData, messageApi]);
+    }, [activeKey, listData, messageApi, username]);
 
     // Table columns definition
     const columns = [
@@ -106,25 +112,42 @@ const Illustrations = () => {
         {
             title: '未收藏 / 已收藏',
             key: 'action',
-            render: (text, record) => (
-                <Switch
-                    checked={record.collected}
-                    onChange={(checked) => switchOnChange(record.key, checked)}
-                />
-            ),
+            render: (text, record) => {
+                const isCollected = record.collectedUsers?.includes(username);
+                return (
+                    <Switch
+                        checked={isCollected}
+                        onChange={(checked) => switchOnChange(record.key, checked)}
+                    />
+                )
+
+            },
         },
     ];
 
     // Switch onChange handler
     const switchOnChange = async (id, checked) => {
         try {
-            await axios.put(`${API_BASE_URL}/api/list/${id}`, { collected: checked });
-            // Update state
+            await axios.put(`${API_BASE_URL}/api/list/${id}`, {
+                collected: checked,
+                username
+            });
+            // 更新本地状态
             setListData((prev) => ({
                 ...prev,
-                [activeKey]: prev[activeKey].map((item) =>
-                    item.key === id ? { ...item, collected: checked } : item
-                ),
+                [activeKey]: prev[activeKey].map(item => {
+                    if (item.key === id) {
+                        const newUsers = checked
+                            ? [...item.collectedUsers, username]
+                            : item.collectedUsers.filter(u => u !== username);
+                        return {
+                            ...item,
+                            collectedUsers: newUsers,
+                            collected: checked
+                        };
+                    }
+                    return item;
+                })
             }));
 
             messageApi.open({

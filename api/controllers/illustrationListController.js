@@ -27,19 +27,22 @@ exports.createIllustrationList = async (req, res) => {
 exports.updateIllustrationList = async (req, res) => {
     try {
         const { id } = req.params;
-        const { collected } = req.body;
+        const { collected, username } = req.body;
 
-        const updatedIllustration = await IllustrationList.findByIdAndUpdate(
-            id,
-            { collected },
-            { new: true }
-        );
+        const illustration = await IllustrationList.findById(id);
 
-        if (!updatedIllustration) {
-            return res.status(404).json({ error: 'Illustration not found' });
+        if (collected) {
+            if (!illustration.collectedUsers.includes(username)) {
+                illustration.collectedUsers.push(username);
+            }
+        } else {
+            illustration.collectedUsers = illustration.collectedUsers.filter(
+                u => u !== username
+            );
         }
 
-        res.json(updatedIllustration);
+        await illustration.save();
+        res.json(illustration);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update illustrationList' });
     }
