@@ -59,7 +59,7 @@ export default function Profile() {
         <div className="progress">
             {loading ? (
                 <Spin size="large" />
-            ) : (
+            ) : categories.length > 0 ? (
                 categories.map(category => {
                     const progress = progressData[category._id] || { percentage: 0 };
                     return (
@@ -75,6 +75,8 @@ export default function Profile() {
                         </div>
                     )
                 })
+            ) : (
+                <div className="empty-tip">暂无分类数据</div>
             )}
         </div>
     );
