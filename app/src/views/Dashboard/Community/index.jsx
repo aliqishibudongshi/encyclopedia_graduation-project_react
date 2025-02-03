@@ -17,7 +17,7 @@ const CommunityContainer = styled.div`
 
 export default function Community() {
     return (
-        <CommunityContainer>
+        <CommunityContainer data-testid="community-container">
             <Share />
             <div className="promptWord">
                 <span>若要查看最新动态，请手动刷新页面</span>
