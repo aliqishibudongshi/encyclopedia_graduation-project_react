@@ -225,7 +225,7 @@ const Illustrations = () => {
                 />
             </div>
             {loadingCategories ? (
-                <Spin size="large" />
+                <Spin size="large"  data-testid="loading-spinner"/>
             ) : (
                 <Tabs
                     items={tabItems}
