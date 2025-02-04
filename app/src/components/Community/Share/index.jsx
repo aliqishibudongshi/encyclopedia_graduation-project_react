@@ -130,14 +130,17 @@ export default function Share() {
     const handleImageUpload = (e) => {
         const files = Array.from(e.target.files);
 
+        if (!files || files.length === 0) {
+            setImages([]); // 清空图片数组
+            return;
+        }
+
         // Check if adding these files exceeds the limit
         if (images.length + files.length > 6) {
             setError("只能上传六张图片");
-            setTimeout(() => {
-                setError("");
-            }, 2000);
             return;
         }
+        setError("");
 
         const newImages = files.map((file) => ({
             id: URL.createObjectURL(file), // Use unique URLs as IDs
@@ -157,18 +160,12 @@ export default function Share() {
     };
 
     const handleSubmit = () => {
-        if (!content && images.length === 0) {
+        if ((!content.trim() && images.length === 0) || !username) {
             messageApi.open({
                 type: 'warning',
-                content: "请添加一些内容或上传图片"
-            });
-            return;
-        }
-
-        if (!username) {
-            messageApi.open({
-                type: 'error',
-                content: "获取用户信息失败，请重新登录"
+                content: !username ?
+                    "获取用户信息失败，请重新登录" :
+                    "请添加一些内容或上传图片"
             });
             return;
         }
@@ -225,21 +222,24 @@ export default function Share() {
                                 accept="image/*"
                                 onChange={handleImageUpload}
                                 name="image"
+                                data-testid="image-upload-input"
                             />
                         </label>
                     </div>
-                    {error && <div className="error">{error}</div>}
+                    {error && <div className="error" data-testid="image-error">{error}</div>}
                     <div className="uploadedImages">
-                        {images.map(image => (
+                        {images.map((image, index) => (
                             <div className="imageContainer" key={image.id}>
                                 <img
                                     src={image.id}
-                                    alt="Uploaded"
+                                    alt={`Uploaded-${index}`}
                                     className="uploadedImage"
                                 />
                                 <CloseCircleOutlined
                                     className="deleteIcon"
                                     onClick={() => handleDeleteImage(image.id)}
+                                    aria-label="close"
+                                    data-testid={`delete-image-${index}`}
                                 />
                             </div>
                         ))}
