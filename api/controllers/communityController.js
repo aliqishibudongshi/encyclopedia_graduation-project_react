@@ -38,7 +38,7 @@ exports.createPost = async (req, res) => {
 exports.likePost = async (req, res) => {
     try {
         const postId = req.params.id;
-        const username = req.body.data.username;
+        const username = req.body.username;
 
         const post = await Community.findById(postId);
 

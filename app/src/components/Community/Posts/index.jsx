@@ -301,11 +301,8 @@ export default function Posts({ showOnlyUserPosts, currentUser }) {
     // 点赞帖子
     const handleLike = async (id) => {
         try {
-            const response = await axios.post(`${API_BASE_URL}/api/community/like/${id}`, {
-                data: {
-                    username
-                }
-            });
+            const response = await axios.post(`${API_BASE_URL}/api/community/like/${id}`,
+                { username }, { headers: { 'Content-Type': 'application/json' } });
             const updatedLikes = response.data.likes;
             setPosts(posts.map(post => post._id === id ? { ...post, likes: updatedLikes } : post));
         } catch (error) {
@@ -373,7 +370,11 @@ export default function Posts({ showOnlyUserPosts, currentUser }) {
     // 更新帖子打开侧边抽屉
     const handleUpdate = (post) => {
         const newImages = post.imagePath.map(image => {
-            const correctImgPath = image.split('public\\')[1].replace('\\', '/');
+            // 处理不同路径格式
+            const normalizedPath = image.replace(/\\/g, '/');
+            const splitResult = normalizedPath.split('public/');
+            const correctImgPath = splitResult.length > 1 ? splitResult[1] : normalizedPath;
+
             return {
                 id: `${API_BASE_URL}/${correctImgPath}`,
                 file: null,
@@ -458,7 +459,6 @@ export default function Posts({ showOnlyUserPosts, currentUser }) {
     // 删除帖子
     const handleDelete = async (id) => {
         try {
-            console.log('delete' + id);
             const response = await axios.delete(`${API_BASE_URL}/api/community/delete/${id}`);
             const { status, message } = response.data;
 
@@ -509,7 +509,7 @@ export default function Posts({ showOnlyUserPosts, currentUser }) {
                     },
                 ];
                 return (
-                    <div className="postWrapper" key={post._id}>
+                    <div className="postWrapper" key={post._id} data-testid="postWrapper">
                         <div className="postTop">
                             <div className="postTopLeft">
                                 <img
