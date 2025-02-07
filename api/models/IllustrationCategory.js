@@ -8,7 +8,8 @@ const IllustrationCategorySchema = new mongoose.Schema({
         ref: 'Game',
         required: true
     },
-    itemCount: {  // 新增字段
+    // 反映每个图鉴分类下的实际图鉴项数量
+    itemCount: {
         type: Number,
         default: 0
     }
