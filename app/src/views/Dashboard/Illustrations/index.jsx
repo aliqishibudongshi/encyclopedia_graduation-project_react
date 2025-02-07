@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSelector } from "react-redux";
 import { Tabs, Table, Spin, Switch, message } from 'antd';
 import axios from 'axios';
@@ -6,93 +6,152 @@ import { SearchOutlined } from "@ant-design/icons";
 import { API_BASE_URL } from "../../../config";
 import "./index.css";
 
-const Illustrations = () => {
+const Illustrations = React.memo(() => {
     const [loadingCategories, setLoadingCategories] = useState(true);
     const [loadingIllustrations, setLoadingIllustrations] = useState({});
     const [categories, setCategories] = useState([]);
-    const [listData, setListData] = useState({}); // Mapping from categoryId to illustrations
-    const [originalListData, setOriginalListData] = useState({}); // Store original data
+    // 从 categoryId 到 illustrations 的映射
+    const [listData, setListData] = useState({});
+    // 存储原始数据
+    const [originalListData, setOriginalListData] = useState({});
     const [activeKey, setActiveKey] = useState(null);
     const inputRef = useRef();
     const [messageApi, contextHolder] = message.useMessage();
     const username = useSelector(state => state.auth.username);
 
-    // Fetch categories from the API
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                // 1. 先获取游戏ID
-                const gameResponse = await axios.get(`${API_BASE_URL}/api/game`, {
-                    params: { name: '黑神话悟空' }
-                });
-                const gameId = gameResponse.data[0]?._id;
+    // 缓存分类数据
+    const cachedCategories = useRef(null);
+    // 缓存图鉴数据
+    const cachedIllustrations = useRef({});
 
-                // 2. 获取分类
-                const response = await axios.get(`${API_BASE_URL}/api/category`, {
-                    params: { gameId }
-                });
-
-                // 3. 直接使用原始分类数据
-                setCategories(response.data.map(category => ({
-                    key: category._id,
-                    tab: category.name,
-                    originalCategory: category // 保留原始数据
-                })));
-
-                if (response.data.length > 0) {
-                    setActiveKey(response.data[0]._id);
-                }
-                setLoadingCategories(false);
-            } catch (error) {
-                console.error('Error fetching categories:', error);
-                messageApi.open({ type: 'error', content: '获取分类失败' });
-                setLoadingCategories(false);
+    // 从 API 中获取类别
+    const fetchCategories = useCallback(async () => {
+        if (cachedCategories.current) {
+            setCategories(cachedCategories.current);
+            if (cachedCategories.current.length > 0) {
+                setActiveKey(cachedCategories.current[0].key);
             }
-        };
+            setLoadingCategories(false);
+            return;
+        }
+        try {
+            // 1. 先获取游戏ID
+            const gameResponse = await axios.get(`${API_BASE_URL}/api/game`, {
+                params: { name: '黑神话悟空' }
+            });
+            const gameId = gameResponse.data[0]?._id;
 
-        fetchCategories();
+            // 2. 获取分类
+            const response = await axios.get(`${API_BASE_URL}/api/category`, {
+                params: { gameId }
+            });
+
+            // 3. 直接使用原始分类数据
+            const newCategories = response.data.map(category => ({
+                key: category._id,
+                tab: category.name,
+                originalCategory: category // 保留原始数据
+            }));
+            setCategories(newCategories);
+            cachedCategories.current = newCategories;
+
+            if (response.data.length > 0) {
+                setActiveKey(response.data[0]._id);
+            }
+            setLoadingCategories(false);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            messageApi.open({ type: 'error', content: '获取分类失败' });
+            setLoadingCategories(false);
+        }
     }, [messageApi]);
-
-    // Fetch illustrations when activeKey changes
     useEffect(() => {
-        const fetchIllustrations = async () => {
-            if (!activeKey) return;
-            // If data already fetched, do not fetch again
-            if (listData[activeKey]) return;
+        fetchCategories();
+    }, [fetchCategories]);
 
-            // Set loading for the specific category
-            setLoadingIllustrations((prev) => ({ ...prev, [activeKey]: true }));
-            try {
-                const response = await axios.get(`${API_BASE_URL}/api/list`, {
-                    params: { categoryId: activeKey },
-                });
-                const illustrations = response.data.map((item) => ({
-                    key: item._id,
-                    name: item.name,
-                    image: item.image,
-                    description: item.description,
-                    // 根据collectedUsers判断是否收藏
-                    collected: item.collectedUsers.includes(username),
-                    collectedUsers: item.collectedUsers
-                }));
-                setListData((prev) => ({ ...prev, [activeKey]: illustrations }));
-                setOriginalListData((prev) => ({ ...prev, [activeKey]: illustrations })); // Store original data
-            } catch (error) {
-                console.error('Error fetching illustrations:', error);
-                messageApi.open({
-                    type: 'error',
-                    content: '获取图鉴失败',
-                });
-            } finally {
-                setLoadingIllustrations((prev) => ({ ...prev, [activeKey]: false }));
-            }
-        };
+    // 当 activeKey 改变时获取图鉴
+    const fetchIllustrations = useCallback(async () => {
+        if (!activeKey) return;
+        // 优先使用缓存数据
+        if (cachedIllustrations.current[activeKey]) {
+            setListData((prev) => ({ ...prev, [activeKey]: cachedIllustrations.current[activeKey] }));
+            return;
+        }
 
+        // 设置特定类别的加载
+        setLoadingIllustrations((prev) => ({ ...prev, [activeKey]: true }));
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/list`, {
+                params: { categoryId: activeKey },
+            });
+            const illustrations = response.data.map((item) => ({
+                key: item._id,
+                name: item.name,
+                image: item.image,
+                description: item.description,
+                // 根据collectedUsers判断是否收藏
+                collected: item.collectedUsers.includes(username),
+                collectedUsers: item.collectedUsers
+            }));
+            // 更新缓存和状态
+            cachedIllustrations.current[activeKey] = illustrations;
+
+            setListData((prev) => ({ ...prev, [activeKey]: illustrations }));
+            setOriginalListData((prev) => ({ ...prev, [activeKey]: illustrations })); // 存储原始数据
+        } catch (error) {
+            console.error('Error fetching illustrations:', error);
+            messageApi.open({
+                type: 'error',
+                content: '获取图鉴失败',
+            });
+        } finally {
+            setLoadingIllustrations((prev) => ({ ...prev, [activeKey]: false }));
+        }
+    }, [activeKey, messageApi, username]);
+    useEffect(() => {
         fetchIllustrations();
-    }, [activeKey, listData, messageApi, username]);
+    }, [fetchIllustrations]);
 
-    // Table columns definition
-    const columns = [
+    // 切换 onChange 处理程序
+    const switchOnChange = useCallback(async (id, checked) => {
+        try {
+            await axios.put(`${API_BASE_URL}/api/list/${id}`, {
+                collected: checked,
+                username
+            });
+            // 更新本地状态
+            setListData((prev) => ({
+                ...prev,
+                [activeKey]: (prev[activeKey] || []).map(item => {
+                    if (item.key === id) {
+                        const newUsers = checked
+                            ? [...item.collectedUsers, username]
+                            : item.collectedUsers.filter(u => u !== username);
+                        return {
+                            ...item,
+                            collectedUsers: newUsers,
+                            collected: checked
+                        };
+                    }
+                    return item;
+                })
+            }));
+
+            messageApi.open({
+                type: 'success',
+                content: '图鉴更新成功',
+            });
+        } catch (error) {
+            console.error('Error updating illustration:', error);
+            messageApi.open({
+                type: 'error',
+                content: '图鉴更新失败',
+            });
+        }
+    },[activeKey, username, messageApi]);
+
+    // 表格列定义
+    const columns = useMemo(() => [
         {
             title: '名称',
             dataIndex: 'name',
@@ -123,48 +182,10 @@ const Illustrations = () => {
 
             },
         },
-    ];
+    ], [username, switchOnChange]);
 
-    // Switch onChange handler
-    const switchOnChange = async (id, checked) => {
-        try {
-            await axios.put(`${API_BASE_URL}/api/list/${id}`, {
-                collected: checked,
-                username
-            });
-            // 更新本地状态
-            setListData((prev) => ({
-                ...prev,
-                [activeKey]: prev[activeKey].map(item => {
-                    if (item.key === id) {
-                        const newUsers = checked
-                            ? [...item.collectedUsers, username]
-                            : item.collectedUsers.filter(u => u !== username);
-                        return {
-                            ...item,
-                            collectedUsers: newUsers,
-                            collected: checked
-                        };
-                    }
-                    return item;
-                })
-            }));
-
-            messageApi.open({
-                type: 'success',
-                content: '图鉴更新成功',
-            });
-        } catch (error) {
-            console.error('Error updating illustration:', error);
-            messageApi.open({
-                type: 'error',
-                content: '图鉴更新失败',
-            });
-        }
-    };
-
-    // Create tab items dynamically based on fetched data
-    const tabItems = categories.map((category) => ({
+    // 根据获取的数据动态创建标签项
+    const tabItems = useMemo(() => categories.map((category) => ({
         label: category.tab,
         key: category.key,
         children: (
@@ -176,19 +197,19 @@ const Illustrations = () => {
                 loading={loadingIllustrations[category.key] || false}
             />
         ),
-    }));
+    })), [categories, columns, listData, loadingIllustrations]);
 
-    // Tabs onChange handler
+    // 标签页 onChange 处理程序
     const tabOnChange = (key) => {
         setActiveKey(key);
     };
 
-    // Search input onchange handler
+    // 搜索输入 onchange 处理程序
     const handleSearch = () => {
         const searchValue = inputRef.current.value.trim().toLowerCase();
 
         if (!searchValue) {
-            // If the search input is empty, reset to the original list
+            // 如果搜索输入为空，则重置为原始列表
             setListData((prev) => ({
                 ...prev,
                 [activeKey]: [...(originalListData[activeKey] || [])],
@@ -221,11 +242,11 @@ const Illustrations = () => {
                     placeholder="输入名称可模糊搜索哦"
                     className="searchInput"
                     ref={inputRef}
-                    onChange={handleSearch} // Update list dynamically as the user types
+                    onChange={handleSearch} // 根据用户输入动态更新列表
                 />
             </div>
             {loadingCategories ? (
-                <Spin size="large"  data-testid="loading-spinner"/>
+                <Spin size="large" data-testid="loading-spinner" />
             ) : (
                 <Tabs
                     items={tabItems}
@@ -236,6 +257,6 @@ const Illustrations = () => {
             )}
         </div>
     );
-};
+});
 
 export default Illustrations;
