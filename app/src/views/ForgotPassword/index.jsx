@@ -38,7 +38,7 @@ const ForgotPassword = () => {
     } else if (forgotPasswordStatus === 'error') {
       messageApi.open({
         type: 'error',
-        content: '邮箱输入错误，请再试一次。',
+        content: '用户名输入错误，请再试一次。',
       });
     }
   }, [forgotPasswordStatus, messageApi, navigate]);
@@ -47,7 +47,7 @@ const ForgotPassword = () => {
     <div style={{ maxWidth: 400, margin: '100px auto', padding: 20, textAlign: 'center', border: '1px solid #ddd', borderRadius: 8 }}>
       {contextHolder}
       <Title level={3}>忘记密码</Title>
-      <Text>输入您的电子邮件以接收密码重置链接。</Text>
+      <Text>输入您的用户名以接收密码重置链接。</Text>
       <Form
         name="forgot-password"
         onFinish={onFinish}
@@ -55,11 +55,11 @@ const ForgotPassword = () => {
         style={{ marginTop: 20 }}
       >
         <Form.Item
-          label="邮箱"
-          name="email"
-          rules={[{ required: true, message: '请输入你的邮箱！' }, { type: 'email', message: '请输入有效邮箱！' }]}
+          label="用户名"
+          name="username"
+          rules={[{ required: true, message: '请输入你的用户名' }]}
         >
-          <Input placeholder="请输入你的邮箱" />
+          <Input placeholder="请输入你的用户名" />
         </Form.Item>
 
         <Form.Item>

@@ -1,56 +1,109 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 
 // JWT Secret
 const JWT_SECRET = 'encyclopedia_jwt_secret_key';
 
+// 登录用户
 exports.loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
+
     try {
-        const user = await User.findOne({ username: email });
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        // 密码验证通过后，生成 token，否则401
-        if (user && isValidPassword) {
-            const token = jwt.sign({ _id: user._id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-            const username = user.username;
-            res.json({ token, username });
-        } else {
-            res.status(401).json({ error: 'Invalid credentials' });
+        const user = await User.findOne({ username: username.trim() });
+        if (!user) {
+            return res.status(401).json({ error: '用户不存在' });
         }
+
+        const isValid = await bcrypt.compare(password.trim(), user.password);
+        if (!isValid) {
+            return res.status(401).json({ error: '密码错误' });
+        }
+
+        const token = jwt.sign(
+            { userId: user._id },
+            JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        res.json({
+            token,
+            username: user.username,
+            userId: user._id
+        });
+
     } catch (error) {
-        res.status(500).json({ error: 'Failed to login' });
+        res.status(500).json({ error: '服务器异常，请稍后重试' });
     }
 };
 
+
+// 注册用户
 exports.registerUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
+
     try {
+        // 1. 显式检查用户名存在性
+        const existingUser = await User.findOne({ username: username.trim() });
+        if (existingUser) {
+            return res.status(409).json({
+                status: 'error',
+                code: 'USERNAME_EXISTS',
+                message: '用户名已被使用'
+            });
+        }
+
+        // 2. 创建新用户
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ username: email, password: hashedPassword });
+        const newUser = new User({ username: username.trim(), password: hashedPassword });
         await newUser.save();
-        res.status(201).json({ status: 'success', message: 'Registration success' });
+
+        res.status(201).json({
+            status: 'success',
+            message: '注册成功'
+        });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: 'Registration failed', error });
+        let response = {
+            status: 'error',
+            code: 'SERVER_ERROR',
+            message: '注册失败'
+        };
+
+        if (error.code === 11000) {
+            response = {
+                ...response,
+                code: 'USERNAME_EXISTS',
+                message: '用户名已被占用'
+            };
+        } else if (error.name === 'ValidationError') {
+            response = {
+                ...response,
+                code: 'VALIDATION_FAILED',
+                message: Object.values(error.errors).map(e => e.message).join('; ')
+            };
+        }
+
+        console.error('Registration Error:', error);
+        res.status(500).json(response);
     }
 };
 
+// 忘记密码
 exports.forgotPassword = async (req, res) => {
-    const { email } = req.body;
-    const user = await User.findOne({ username: email });
+    const { username } = req.body;
+    const user = await User.findOne({ username });
 
-    if (!user) return res.status(404).json({ message: 'Email not found' });
+    if (!user) return res.status(404).json({ message: 'username not found' });
 
     res.status(201).json({ status: 'success', message: 'Reset link sent' });
 };
 
+// 重置密码
 exports.resetPassword = async (req, res) => {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
     try {
-        const user = await User.findOne({ username: email });
-        if (!user) return res.status(404).json({ message: 'Email not found' });
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ status: 'username error', message: 'username not found' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
         user.password = hashedPassword;
@@ -62,21 +115,17 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
-// 获取用户信息
-exports.getUserInfo = async (req, res) => {
-    const token = req.headers.authorization.split(" ")[1];
+// 检查用户名
+exports.checkUsername = async (req, res) => {
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(decoded._id);
-        if (user) {
-            res.json({
-                username: user.username,
-                // 可以返回其他用户信息，如用户ID、头像等，根据需求调整
-            });
-        } else {
-            res.status(404).json({ error: "User not found" });
-        }
+        const { username } = req.query;
+        if (!username) return res.status(400).json({ message: '缺少用户名参数' });
+
+        const user = await User.findOne({ username });
+        res.json({
+            available: !user
+        });
     } catch (error) {
-        res.status(401).json({ error: "Invalid token" });
+        res.status(500).json({ message: '检查服务错误' });
     }
 };
