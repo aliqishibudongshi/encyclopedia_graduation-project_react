@@ -4,7 +4,61 @@ import { Tabs, Table, Spin, Switch, message } from 'antd';
 import axios from 'axios';
 import { SearchOutlined } from "@ant-design/icons";
 import { API_BASE_URL } from "../../../config";
-import "./index.css";
+import styled from 'styled-components';
+
+const IllustrationsContainer = styled.div`
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
+
+    .searchBar {
+        width: 100%;
+        margin: 12px 0;
+        padding: 12px 0;
+        box-sizing: border-box;
+        background-color: #eee;
+        border-radius: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+    }
+
+    .searchIcon {
+        font-size: 24px;
+        cursor: pointer;
+        color: #757598;
+    }
+
+    .searchInput {
+        width: 70%;
+        border: none;
+        background-color: #eee;
+        cursor: pointer;
+        font-size: 20px;
+
+        &:focus {
+            outline: none;
+        }
+    }
+    
+    .ant-tabs-nav-wrap {
+    display: flex;
+    width: 100%;
+    }
+
+    .ant-tabs-nav-list {
+        display: flex;
+        width: 100%;
+    }
+
+    .ant-tabs-tab {
+        flex: 1;
+        justify-content: center;
+    }
+`;
 
 const Illustrations = React.memo(() => {
     const [loadingCategories, setLoadingCategories] = useState(true);
@@ -37,9 +91,9 @@ const Illustrations = React.memo(() => {
         try {
             // 1. 先获取游戏ID
             const gameResponse = await axios.get(`${API_BASE_URL}/api/game`, {
-                params: { name: '黑神话悟空' }
+                params: { name: '动物森友会' }
             });
-            const gameId = gameResponse.data[0]?._id;
+            const gameId = gameResponse.data[1]?._id;
 
             // 2. 获取分类
             const response = await axios.get(`${API_BASE_URL}/api/category`, {
@@ -148,7 +202,7 @@ const Illustrations = React.memo(() => {
                 content: '图鉴更新失败',
             });
         }
-    },[activeKey, username, messageApi]);
+    }, [activeKey, username, messageApi]);
 
     // 表格列定义
     const columns = useMemo(() => [
@@ -233,8 +287,23 @@ const Illustrations = React.memo(() => {
         }
     };
 
+    // 分类完成提示
+    useEffect(() => {
+        if (activeKey) {
+            const total = originalListData[activeKey]?.length || 0;
+            const collected = listData[activeKey]?.filter(i => i.collected).length || 0;
+
+            if (total > 0 && collected === total) {
+                messageApi.info({
+                    content: '🎉 恭喜完成当前分类！去社区分享截图获得好评吧！',
+                    duration: 3,
+                });
+            }
+        }
+    }, [listData, activeKey, messageApi, originalListData]);
+
     return (
-        <div className='illustrations-container'>
+        <IllustrationsContainer>
             <div className='searchBar'>
                 {contextHolder}
                 <SearchOutlined className='searchIcon' />
@@ -255,7 +324,7 @@ const Illustrations = React.memo(() => {
                     type="card"
                 />
             )}
-        </div>
+        </IllustrationsContainer>
     );
 });
 

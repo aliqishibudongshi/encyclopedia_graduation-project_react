@@ -28,7 +28,8 @@ const Login = () => {
 
       const response = await axios.post(
         `${API_BASE_URL}/api/users/login`,
-        filteredValues
+        filteredValues,
+        { withCredentials: true }
       );
 
       const { token, username } = response.data;
@@ -82,7 +83,7 @@ const Login = () => {
       default:
         break;
     }
-    
+
 
   }, [loginStatus, messageApi, navigate]);
 

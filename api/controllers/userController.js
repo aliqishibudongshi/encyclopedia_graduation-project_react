@@ -2,36 +2,46 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
-// JWT Secret
-const JWT_SECRET = 'encyclopedia_jwt_secret_key';
-
 // 登录用户
 exports.loginUser = async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const user = await User.findOne({ username: username.trim() });
+        const user = await User.findOne({ username: username.trim() })
+            .select('+password')
+            .lean();
+
         if (!user) {
             return res.status(401).json({ error: '用户不存在' });
         }
 
         const isValid = await bcrypt.compare(password.trim(), user.password);
+
         if (!isValid) {
             return res.status(401).json({ error: '密码错误' });
         }
 
-        const token = jwt.sign(
-            { userId: user._id },
-            JWT_SECRET,
-            { expiresIn: '1h' }
-        );
+        // 设置 session，并在保存完成后发送响应
+        req.session.userId = user._id;
+        req.session.save((err) => {
+            if (err) {
+                console.log("Session 保存失败：", err);
+                return res.status(500).json({ error: "会话初始化失败" });
+            }
 
-        res.json({
-            token,
-            username: user.username,
-            userId: user._id
+            const token = jwt.sign(
+                { userId: user._id },
+                process.env.JWT_SECRET,
+                { expiresIn: '1h' }
+            );
+
+            res.json({
+                token,
+                username: user.username,
+                userId: user._id,
+                platforms: user.platforms
+            });
         });
-
     } catch (error) {
         res.status(500).json({ error: '服务器异常，请稍后重试' });
     }

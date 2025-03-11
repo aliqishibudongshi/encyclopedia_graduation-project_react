@@ -6,6 +6,9 @@ import Illustration from "../views/Dashboard/Illustrations";
 import Community from "../views/Dashboard/Community";
 import Profile from "../views/Dashboard/Profile";
 import ResetPassword from "../views/ResetPassword";
+import ProfileData from "../views/Dashboard/Profile/ProfileData";
+import ProfileStatus from "../views/Dashboard/Profile/ProfileStatus";
+import { Navigate } from 'react-router-dom';
 
 export const publicRoutes = [
     { path: '/login', element: <Login /> },
@@ -21,7 +24,15 @@ export const privateRoutes = [
         children: [
             { path: 'illustrations', element: <Illustration /> },
             { path: 'community', element: <Community /> },
-            { path: 'profile', element: <Profile /> },
+            {
+                path: 'profile',
+                element: <Profile />,
+                children: [
+                    { path: '', element: <Navigate to="profile-data" replace />, index: true },
+                    { path: 'profile-data', element: <ProfileData /> },
+                    { path: 'profile-status', element: <ProfileStatus /> },
+                ]
+            },
         ],
     },
 ];

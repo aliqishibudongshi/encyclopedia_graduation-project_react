@@ -11,10 +11,15 @@ const wuKongCategories = [
     { name: '武器', gameId: null },
 ];
 
-const animalCategories = [
-    { name: 'Category 1', gameId: null }, // gameId will be set dynamically
-    { name: 'Category 2', gameId: null },
-    { name: 'Category 3', gameId: null },
+const animalCrossingCategories = [
+    { name: '家具', gameId: null },
+    { name: '服装', gameId: null },
+    { name: '鱼类', gameId: null },
+    { name: '昆虫', gameId: null },
+    { name: '化石', gameId: null },
+    { name: '艺术品', gameId: null },
+    { name: 'DIY图纸', gameId: null },
+    { name: '唱片', gameId: null }
 ];
 
-module.exports = { wuKongCategories, animalCategories };
+module.exports = { wuKongCategories, animalCrossingCategories };

@@ -7,7 +7,7 @@ import Profile from './index.jsx';
 
 // 模拟模块
 jest.mock('axios');
-jest.mock('./index.css', () => ({}));
+
 jest.mock('../../../components/Community/Posts', () => ({
     __esModule: true,
     default: ({ currentUser }) => <div data-testid="posts-component">{currentUser}</div>

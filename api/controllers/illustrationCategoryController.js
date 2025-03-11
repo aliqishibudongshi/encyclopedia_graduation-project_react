@@ -1,20 +1,11 @@
 const IllustrationCategory = require('../models/IllustrationCategory');
 const Game = require('../models/Game');
 
-exports.createCategory = async (req, res) => {
-    try {
-        const newCategory = new IllustrationCategory(req.body);
-        await newCategory.save();
-        res.json(newCategory);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to create category' });
-    }
-};
 exports.getCategory = async (req, res) => {
     try {
         const { gameId } = req.query;
 
-        // For added security, to validate that the gameId in the request corresponds to a valid Game object before querying the database.
+        // 为了增加安全性，在查询数据库之前验证请求中的 gameId 是否对应有效的 Game 对象。
         if (gameId) {
             const gameExists = await Game.exists({ _id: gameId });
             if (!gameExists) {

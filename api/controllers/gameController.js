@@ -4,7 +4,9 @@ const IllustrationList = require('../models/IllustrationList');
 
 exports.getGamesWithDetails = async (req, res) => {
     try {
-        const games = await Game.find().lean(); // Fetch all games
+        // 在getGamesWithDetails中增加分页参数
+        const { page = 1, limit = 10 } = req.query;
+        const games = await Game.find().skip((page - 1) * limit).limit(limit).lean();
         const data = await Promise.all(
             games.map(async (game) => {
                 const categories = await IllustrationCategory.find({ gameId: game._id }).lean();
@@ -20,15 +22,5 @@ exports.getGamesWithDetails = async (req, res) => {
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch games with details' });
-    }
-};
-
-exports.createGame = async (req, res) => {
-    try {
-        const newGame = new Game(req.body);
-        await newGame.save();
-        res.json(newGame);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to create game' });
     }
 };

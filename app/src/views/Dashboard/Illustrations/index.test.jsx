@@ -9,8 +9,6 @@ import Illustrations from './index.jsx';
 import { Provider } from 'react-redux';
 import configureMockStore from 'redux-mock-store';
 
-// Mock css
-jest.mock('./index.css', () => ({}));
 
 // Mock axios实现
 const mockAxios = axios.default;

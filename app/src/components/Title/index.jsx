@@ -9,8 +9,6 @@ const Header = styled.header`
   height: 50px;
   background-color: #4caf50;
   color: white;
-  font-size: 20px;
-  font-weight: bold;
   padding: 0 10px;
   box-sizing: border-box;
 
@@ -37,7 +35,7 @@ export default function Title() {
   return (
     <Header>
       <span></span>
-      <span>游戏图鉴收集助手</span>
+      <h1>游戏图鉴收集助手</h1>
       <button className="loginLogout" onClick={handleLoginLogout}>
         {isLoggedIn ? "退出" : "登录"}
       </button>

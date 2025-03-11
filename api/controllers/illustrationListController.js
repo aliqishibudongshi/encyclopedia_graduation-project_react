@@ -1,9 +1,9 @@
 const IllustrationList = require('../models/IllustrationList');
 
-// Fetch all illustrations or filter by categoryId
+// 获取所有插图或按 categoryId 过滤
 exports.getAllIllustrationsList = async (req, res) => {
     try {
-        const { categoryId } = req.query; // Extract categoryId from query parameters
+        const { categoryId } = req.query; // 从查询参数中提取 categoryId
         const filter = categoryId ? { categoryId } : {};
         const illustrationList = await IllustrationList.find(filter);
         res.json(illustrationList);
@@ -12,18 +12,7 @@ exports.getAllIllustrationsList = async (req, res) => {
     }
 };
 
-// Create a new illustration
-exports.createIllustrationList = async (req, res) => {
-    try {
-        const newIllustrationList = new IllustrationList(req.body);
-        await newIllustrationList.save();
-        res.json(newIllustrationList);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to create illustrationList' });
-    }
-};
-
-// Update the collected status
+// 更新收集的状态
 exports.updateIllustrationList = async (req, res) => {
     try {
         const { id } = req.params;
@@ -45,5 +34,6 @@ exports.updateIllustrationList = async (req, res) => {
         res.json(illustration);
     } catch (error) {
         res.status(500).json({ error: 'Failed to update illustrationList' });
-    }
+        throw error;
+    } 
 };
