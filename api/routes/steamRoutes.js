@@ -43,7 +43,7 @@ router.get('/games/:steamId', authenticateToken, async (req, res) => {
         const paginatedGames = filteredGames.slice(startIndex, startIndex + limit);
 
         // 带错误处理的成就获取
-        for (const game of filteredGames) {
+        for (const game of paginatedGames) {
             try {
                 const ratio = await getAchievementRatio(game.appid, req.params.steamId);
                 enhancedGames.push({
