@@ -10,6 +10,7 @@ import {
     Card,
     Row,
     Col,
+    message
 } from 'antd';
 import { bindPlatform, updateGames } from '../../../../redux/slices/authSlice';
 import ProfileGameList from '../../../../components/Profile/ProfileGameList';
@@ -82,6 +83,7 @@ export default function ProfileData() {
                 dispatch(updateGames({ platform: 'steam', games, profile, totalPlaytime }));
             } catch (err) {
                 setError('数据加载失败，请重试');
+                message.error('游戏数据加载失败，请稍后重试');
             } finally {
                 setLoading(false);
             }

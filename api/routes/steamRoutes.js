@@ -14,10 +14,13 @@ router.get('/games/:steamId', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: '无访问权限' });
         }
 
-        // 并行获取基础数据
+        // 并行获取基础数据(增加超时和重试）
         const [gamesRes, profileRes] = await Promise.all([
-            axios.get(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${process.env.STEAM_API_KEY}&steamid=${req.params.steamId}&include_appinfo=true`),
-            axios.get(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${req.params.steamId}`)
+            axios.get(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${process.env.STEAM_API_KEY}&steamid=${req.params.steamId}&include_appinfo=true`, {
+                timeout: 10000,
+                headers: { 'Retry-After': 3 }
+            }),
+            axios.get(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${process.env.STEAM_API_KEY}&steamids=${req.params.steamId}`, { timeout: 10000 })
         ]);
 
         // 数据校验
