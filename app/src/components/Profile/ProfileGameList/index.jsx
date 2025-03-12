@@ -119,7 +119,7 @@ export default function ProfileGameList({ dataSource, type, isBound, onBind, loa
     }
 
     // 获取数据的loading状态
-    if (isBound && (!dataSource || dataSource.length === 0)) {
+    if (isBound && type === 'steam' && (!dataSource || dataSource.length === 0)) {
         return (
             <GameListContainer>
                 <div className="bind-button-container">
