@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import styled from "styled-components";
 import {
@@ -280,7 +280,7 @@ export default function Posts({ showOnlyUserPosts, currentUser }) {
     const [imageError, setImageError] = useState("");
 
     // 获取帖子数据
-    const fetchPosts = async () => {
+    const fetchPosts = useCallback(async () => {
         try {
             const url = showOnlyUserPosts
                 ? `${API_BASE_URL}/api/community?username=${currentUser}`
@@ -292,11 +292,11 @@ export default function Posts({ showOnlyUserPosts, currentUser }) {
         } catch (error) {
             console.error("Failed to fetch posts", error);
         }
-    };
+    }, [currentUser, showOnlyUserPosts]);
     // 更新useEffect依赖
     useEffect(() => {
         fetchPosts();
-    }, [showOnlyUserPosts, currentUser]);
+    }, [showOnlyUserPosts, currentUser, fetchPosts]);
 
     // 点赞帖子
     const handleLike = async (id) => {

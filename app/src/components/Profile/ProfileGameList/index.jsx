@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { List, Button, Progress, Typography, Spin } from 'antd';
+import { List, Button, Progress, Typography } from 'antd';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useInView } from 'react-intersection-observer';
 import { API_BASE_URL } from '../../../config';
 import Loading from '../../Loading';
 
@@ -43,25 +42,11 @@ const GameListContainer = styled.div`
     .ant-list .ant-list-item {
         display: block;
     }
-
-    .bottomPrompt {
-        display: flex;
-        justify-content: center;
-        font-size: 12px;
-        color: #999;
-    }
 `;
 
-export default function ProfileGameList({ dataSource, type, isBound, onBind, loadMore, hasMore, loading }) {
+export default function ProfileGameList({ dataSource, type, isBound, onBind, loading, error }) {
     const [progressData, setProgressData] = useState({});
     const username = useSelector(state => state.auth.username);
-    const [scrollRef, inView] = useInView();
-
-    useEffect(() => {
-        if (inView && hasMore && !loading) {
-            loadMore();
-        }
-    }, [inView, hasMore, loading, loadMore]);
 
     // 获取进度数据
     useEffect(() => {
@@ -134,7 +119,7 @@ export default function ProfileGameList({ dataSource, type, isBound, onBind, loa
     }
 
     // 获取数据的loading状态
-    if (isBound && dataSource?.length === 0) {
+    if (isBound && (!dataSource || dataSource.length === 0)) {
         return (
             <GameListContainer>
                 <div className="bind-button-container">
@@ -148,8 +133,8 @@ export default function ProfileGameList({ dataSource, type, isBound, onBind, loa
         <GameListContainer>
             <List
                 dataSource={type === 'default' ? [defaultGame] : dataSource}
-                renderItem={(item, index) => (
-                    <List.Item ref={index === dataSource?.length - 1 ? scrollRef : null}>
+                renderItem={(item) => (
+                    <List.Item>
                         <div className="game-item">
                             <img
                                 src={type === 'default' ? defaultGame.image : item.img_url}
@@ -163,8 +148,6 @@ export default function ProfileGameList({ dataSource, type, isBound, onBind, loa
                     </List.Item>
                 )}
             />
-            {loading && <Spin />}
-            {!hasMore && <div className='bottomPrompt'>--- 已经到底了 ---</div>}
         </GameListContainer>
     );
 }

@@ -10,14 +10,9 @@ router.get('/games/:steamId', authenticateToken, async (req, res) => {
     try {
         // 权限验证
         const user = await User.findById(req.user.id);
-        if (!user?.platforms?.steam?.bound || user.platforms.steam.steamId !== req.params.steamId) {
+        if (!user?.platforms?.steam?.bound || String(user.platforms.steam.steamId) !== String(req.params.steamId)) {
             return res.status(403).json({ error: '无访问权限' });
         }
-
-        // 获取分页参数
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 5;
-        const startIndex = (page - 1) * limit;
 
         // 并行获取基础数据
         const [gamesRes, profileRes] = await Promise.all([
@@ -39,11 +34,8 @@ router.get('/games/:steamId', authenticateToken, async (req, res) => {
         const filteredGames = gamesRes.data.response.games
             .filter(g => g.playtime_forever > 0); // 过滤0分钟游戏
 
-        // 分页处理
-        const paginatedGames = filteredGames.slice(startIndex, startIndex + limit);
-
         // 带错误处理的成就获取
-        for (const game of paginatedGames) {
+        for (const game of filteredGames) {
             try {
                 const ratio = await getAchievementRatio(game.appid, req.params.steamId);
                 enhancedGames.push({
@@ -69,8 +61,6 @@ router.get('/games/:steamId', authenticateToken, async (req, res) => {
             },
             games: enhancedGames.sort((a, b) => b.playtime - a.playtime), // 按游玩时间排序
             totalPlaytime: gamesRes.data.response.games.reduce((sum, g) => sum + g.playtime_forever, 0),
-            total: filteredGames.length, // 总数据量
-            hasMore: startIndex + limit < filteredGames.length
         });
     } catch (error) {
         console.error('Steam API Error:', {

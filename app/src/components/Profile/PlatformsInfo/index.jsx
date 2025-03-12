@@ -45,7 +45,7 @@ export default function PlatformsInfo({ type }) {
                     className='avatar'
                     src={type === 'default'
                         ? '/images/defaultAvatar.jpg'
-                        : (steam.profile?.avatar || '/images/steam-default.png')}
+                        : (steam.profile?.avatar || '/images/steam-default.jpg')}
                     alt="user's avatar" />
                 <span className='username'>昵称：{type === 'default' ? username : steamUsername}</span>
             </div>

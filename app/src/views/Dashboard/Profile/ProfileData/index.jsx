@@ -1,5 +1,5 @@
 // src/views/Dashboard/Profile/ProfileData.jsx
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SiSteam } from "react-icons/si";
 import { useSelector, useDispatch } from 'react-redux';
@@ -26,55 +26,10 @@ export default function ProfileData() {
     const [activeKey, setActiveKey] = useState();
     const token = useSelector(state => state.auth.token);
     const steam = useSelector(state => state.auth.platforms.steam);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [loading, setLoading] = useState(false);
-
-    // 获取 Steam 游戏
-    const fetchSteamGames = useCallback(async (steamId, page = 1) => {
-        try {
-            const res = await axios.get(`${API_BASE_URL}/api/steam/games/${steamId}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
-                params: { page, limit: 5 } // 添加分页参数
-            });
-            console.log("输出res.data：", res.data);
-            return {
-                ...res.data,
-                hasMore: res.data.hasMore // 确保后端返回是否有更多数据
-            };
-        } catch (error) {
-            console.error('Steam API Error:', error);
-            return { games: [], hasMore: false };
-        }
-    }, [token]);
-
-    // 加载更多逻辑
-    const loadMoreGames = useCallback(async () => {
-        if (!hasMore || loading) return;
-
-        setLoading(true);
-        try {
-            const { games: newGames, hasMore: newHasMore, profile, totalPlaytime, total } = await fetchSteamGames(steam.steamId, page + 1);
-
-            dispatch(updateGames({
-                platform: 'steam',
-                games: newGames,
-                profile,
-                totalPlaytime,
-                total,
-                merge: true // 新增 merge 参数表示追加数据
-            }));
-
-            setPage(p => p + 1);
-            setHasMore(newHasMore);
-        } finally {
-            setLoading(false);
-        }
-    }, [page, hasMore, loading, steam.steamId, dispatch, fetchSteamGames]);
 
     // Steam绑定处理
     const handleSteamBind = async () => {
@@ -83,7 +38,6 @@ export default function ProfileData() {
             if (process.env.NODE_ENV === 'production') {
                 window.location.href = `${API_BASE_URL}/api/auth/steam/bind`;
             } else {
-
                 const { data } = await axios.get(`${API_BASE_URL}/api/auth/steam/bind`, {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -99,6 +53,44 @@ export default function ProfileData() {
             console.error("绑定失败:", error);
         }
     };
+
+    // 获取 Steam 游戏
+    const fetchSteamGames = useCallback(async (steamId) => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/steam/games/${steamId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            console.log("输出res.data：", res.data);
+            return {
+                ...res.data,
+                hasMore: res.data.hasMore // 确保后端返回是否有更多数据
+            };
+        } catch (error) {
+            console.error('Steam API Error:', error);
+            return { games: [], hasMore: false };
+        }
+    }, [token]);
+
+    // 绑定后自动加载数据
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                const { games, profile, totalPlaytime } = await fetchSteamGames(steam.steamId);
+                dispatch(updateGames({ platform: 'steam', games, profile, totalPlaytime }));
+            } catch (err) {
+                setError('数据加载失败，请重试');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (steam.bound && steam.steamId && !steam.games?.length) {
+            loadData();
+        }
+    }, [steam.bound, steam.steamId, steam.games.length, dispatch, fetchSteamGames]);
 
 
     // 嵌套的折叠面板的items
@@ -118,9 +110,8 @@ export default function ProfileData() {
                                 isBound={steam.bound}
                                 dataSource={steam.games}
                                 onBind={handleSteamBind}
-                                loadMore={loadMoreGames}
-                                hasMore={hasMore}
                                 loading={loading}
+                                error={error}
                             />
                         </Card>
                     </Col>

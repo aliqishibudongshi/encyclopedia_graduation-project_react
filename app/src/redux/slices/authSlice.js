@@ -15,9 +15,8 @@ const initialState = () => {
             steam: {
                 bound: !!steamData,
                 steamId: steamData?.steamId || null,
-                games: steamData?.games || [],
+                games: steamData?.games ?? [],
                 profile: steamData?.profile || {},
-                total: steamData?.total || 0,
                 totalPlaytime: steamData?.totalPlaytime || 0
             }
         }
@@ -77,25 +76,12 @@ const authSlice = createSlice({
             if (platform === 'steam') state.platforms.steam.steamId = data;
         },
         updateGames: (state, action) => {
-            const { platform, games, profile, totalPlaytime, total, merge = false } = action.payload;
+            const { platform, games, profile, totalPlaytime } = action.payload;
 
-            if (merge) {
-                state.platforms[platform].games = [...state.platforms[platform].games, ...games];
-            } else {
-                state.platforms[platform].games = games;
-            }
+            state.platforms[platform].games = games;
+            state.platforms[platform].profile = profile;
+            state.platforms[platform].totalPlaytime = totalPlaytime;
 
-            if (profile) {
-                state.platforms[platform].profile = profile;
-            }
-
-            if (totalPlaytime !== undefined) {
-                state.platforms[platform].totalPlaytime = totalPlaytime;
-            }
-
-            if (total) {
-                state.platforms[platform].total = total;
-            }
 
             // 同步到 localStorage
             const storageKey = `steamData_${state.username}`;
@@ -103,7 +89,6 @@ const authSlice = createSlice({
                 games,
                 profile,
                 totalPlaytime,
-                total,
                 lastUpdated: Date.now()
             }));
         }
