@@ -26,7 +26,7 @@ const ProfileDataContainer = styled.div`
 export default function ProfileData() {
     const [activeKey, setActiveKey] = useState();
     const token = useSelector(state => state.auth.token);
-    const steam = useSelector(state => state.auth.platforms.steam);
+    const steam = useSelector(state => state.auth.platforms.steam || {});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const dispatch = useDispatch();
@@ -64,13 +64,10 @@ export default function ProfileData() {
                 }
             });
             console.log("输出res.data：", res.data);
-            return {
-                ...res.data,
-                hasMore: res.data.hasMore // 确保后端返回是否有更多数据
-            };
+            return res.data;
         } catch (error) {
             console.error('Steam API Error:', error);
-            return { games: [], hasMore: false };
+            return [];
         }
     }, [token]);
 
@@ -89,10 +86,10 @@ export default function ProfileData() {
             }
         };
 
-        if (steam.bound && steam.steamId && !steam.games?.length) {
+        if (steam.bound && steam.steamId && (!steam.games || steam.games.length === 0)) {
             loadData();
         }
-    }, [steam.bound, steam.steamId, steam.games.length, dispatch, fetchSteamGames]);
+    }, [steam.bound, steam.steamId, steam.games, steam.games?.length, dispatch, fetchSteamGames]);
 
 
     // 嵌套的折叠面板的items
@@ -114,6 +111,7 @@ export default function ProfileData() {
                                 onBind={handleSteamBind}
                                 loading={loading}
                                 error={error}
+                                onGameClick={(type, appid) => navigate(`/dashboard/illustrations?type=${type}&appid=${appid}`)}
                             />
                         </Card>
                     </Col>
@@ -128,14 +126,18 @@ export default function ProfileData() {
             key: '1',
             label: '封闭生态圈（手动标记）',
             children: (
-                <Row gutter={16} onClick={() => navigate('/dashboard/illustrations')}>
+                <Row gutter={16} >
                     <Col span={24}>
                         <Card
                             title='默认游戏'
                             bordered={false}
                         >
                             <PlatformsInfo type="default" />
-                            <ProfileGameList type="default" isBound={true} />
+                            <ProfileGameList
+                                type="default"
+                                isBound={true}
+                                onGameClick={(type, appid) => navigate(`/dashboard/illustrations?type=${type}&appid=${appid}`)}
+                            />
                         </Card>
                     </Col>
                 </Row>

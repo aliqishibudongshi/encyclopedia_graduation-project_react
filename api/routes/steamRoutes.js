@@ -6,7 +6,6 @@ const axios = require('axios');
 const User = require('../models/User');
 
 router.get('/games/:steamId', authenticateToken, async (req, res) => {
-
     try {
         // 权限验证
         const user = await User.findById(req.user.id);
@@ -97,5 +96,33 @@ async function getAchievementRatio(appId, steamId) {
         throw error;
     }
 }
+
+router.get('/achievements', async (req, res) => {
+    try {
+        const { steamid, appid } = req.query;
+
+        // 获取玩家成就
+        const apiRes = await axios.get(
+            `https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/`,
+            { params: { key: process.env.STEAM_API_KEY, steamid, appid } }
+        );
+
+        // 获取成就元数据
+        const schemaRes = await axios.get(
+            `https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/`,
+            { params: { key: process.env.STEAM_API_KEY, appid } }
+        );
+
+        // 合并数据
+        const merged = apiRes.data.playerstats.achievements.map(ach => ({
+            ...ach,
+            ...schemaRes.data.game.availableGameStats.achievements.find(s => s.name === ach.apiname)
+        }));
+
+        res.json(merged);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get achievements' });
+    }
+});
 
 module.exports = router;

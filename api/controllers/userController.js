@@ -139,3 +139,40 @@ exports.checkUsername = async (req, res) => {
         res.status(500).json({ message: '检查服务错误' });
     }
 };
+
+// 获取用户信息
+exports.getUserInfo = async (req, res) => {
+    try {
+        // 获取已认证用户信息（从authenticateToken中间件获取的req.user.id）
+        const user = await User.findById(req.user.id)
+            .select('-password -__v') // 排除敏感字段
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({ error: '用户不存在' });
+        }
+
+        // 结构化平台数据
+        const formattedUser = {
+            id: user._id,
+            username: user.username,
+            platforms: {
+                steam: {
+                    bound: !!user.platforms?.steam?.steamId,
+                    steamId: user.platforms?.steam?.steamId || null,
+                    linkedAt: user.platforms?.steam?.linkedAt || null,
+                    lastSynced: user.platforms?.steam?.lastSynced || null
+                }
+                // 可扩展其他平台...
+            }
+        };
+
+        res.status(200).json(formattedUser);
+    } catch (error) {
+        console.error('获取用户信息失败:', error);
+        res.status(500).json({
+            error: '获取用户信息失败',
+            details: process.env.NODE_ENV === 'development' ? error.message : null
+        });
+    }
+};

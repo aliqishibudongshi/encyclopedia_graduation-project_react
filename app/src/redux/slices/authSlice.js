@@ -17,27 +17,12 @@ const initialState = () => {
                 steamId: steamData?.steamId || null,
                 games: steamData?.games ?? [],
                 profile: steamData?.profile || {},
-                totalPlaytime: steamData?.totalPlaytime || 0
+                totalPlaytime: steamData?.totalPlaytime || 0,
+                achievements: steamData?.achievements || []
             }
         }
     }
 }
-// const initialState = {
-//     isLoggedIn: JSON.parse(localStorage.getItem('isLoggedIn')) || false,
-//     username: localStorage.getItem('username') || null,
-//     token: localStorage.getItem('token') || null,
-//     lastRoute: '/dashboard/illustrations',
-//     platforms: {
-//         steam: {
-//             bound: false,
-//             steamId: null,
-//             games: [],
-//             profile: {},
-//             totalPlaytime: null,
-//         },
-//     }
-// };
-
 
 const authSlice = createSlice({
     name: 'auth',
@@ -73,14 +58,15 @@ const authSlice = createSlice({
         bindPlatform: (state, action) => {
             const { platform, data } = action.payload;
             state.platforms[platform].bound = true;
-            if (platform === 'steam') state.platforms.steam.steamId = data;
+            state.platforms[platform].steamId = data;
         },
         updateGames: (state, action) => {
-            const { platform, games, profile, totalPlaytime } = action.payload;
+            const { platform, games, profile, totalPlaytime, achievements } = action.payload;
 
             state.platforms[platform].games = games;
             state.platforms[platform].profile = profile;
             state.platforms[platform].totalPlaytime = totalPlaytime;
+            state.platforms[platform].achievements = achievements;
 
 
             // 同步到 localStorage
@@ -89,6 +75,7 @@ const authSlice = createSlice({
                 games,
                 profile,
                 totalPlaytime,
+                achievements,
                 lastUpdated: Date.now()
             }));
         }

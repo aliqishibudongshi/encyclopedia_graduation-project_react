@@ -17,6 +17,7 @@ const GameListContainer = styled.div`
         box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
         background-color: #f9f9f9;
         border-radius: 15px;
+        cursor: pointer;
 
         img {
             width: 80px;
@@ -44,7 +45,7 @@ const GameListContainer = styled.div`
     }
 `;
 
-export default function ProfileGameList({ dataSource, type, isBound, onBind, loading, error }) {
+export default function ProfileGameList({ dataSource, type, isBound, onBind, loading, error, onGameClick }) {
     const [progressData, setProgressData] = useState({});
     const username = useSelector(state => state.auth.username);
 
@@ -135,7 +136,10 @@ export default function ProfileGameList({ dataSource, type, isBound, onBind, loa
                 dataSource={type === 'default' ? [defaultGame] : dataSource}
                 renderItem={(item) => (
                     <List.Item>
-                        <div className="game-item">
+                        <div
+                            className="game-item"
+                            onClick={() => onGameClick && onGameClick(type, item.appid)}
+                        >
                             <img
                                 src={type === 'default' ? defaultGame.image : item.img_url}
                                 alt={item.name}

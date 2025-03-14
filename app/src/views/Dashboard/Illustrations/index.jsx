@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useLocation } from "react-router-dom";
 import { Tabs, Table, Spin, Switch, message } from 'antd';
 import axios from 'axios';
 import { SearchOutlined } from "@ant-design/icons";
-import { API_BASE_URL } from "../../../config";
 import styled from 'styled-components';
+import { API_BASE_URL } from "../../../config";
+import { updateGames } from '../../../redux/slices/authSlice';
+
 
 const IllustrationsContainer = styled.div`
     display: flex;
@@ -61,6 +64,19 @@ const IllustrationsContainer = styled.div`
 `;
 
 const Illustrations = React.memo(() => {
+    // 获取路由参数
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    const gameType = params.get('type'); // 'default' 或 'steam'
+    const appid = params.get('appid'); // Steam游戏ID
+    // Steam模式状态
+    const [steamData, setSteamData] = useState([]);
+    const [originalSteamData, setOriginalSteamData] = useState([]);
+    const steam = useSelector(state => state.auth.platforms.steam);
+    // 担心redux的steamId失效，再获取一次
+    const [steamId, setSteamId] = useState(null);
+    const token = useSelector(state => state.auth.token);
+
     const [loadingCategories, setLoadingCategories] = useState(true);
     const [loadingIllustrations, setLoadingIllustrations] = useState({});
     const [categories, setCategories] = useState([]);
@@ -69,14 +85,53 @@ const Illustrations = React.memo(() => {
     // 存储原始数据
     const [originalListData, setOriginalListData] = useState({});
     const [activeKey, setActiveKey] = useState(null);
-    const inputRef = useRef();
     const [messageApi, contextHolder] = message.useMessage();
     const username = useSelector(state => state.auth.username);
-
     // 缓存分类数据
     const cachedCategories = useRef(null);
     // 缓存图鉴数据
     const cachedIllustrations = useRef({});
+    const dispatch = useDispatch();
+
+    // 获取Steam成就数据
+    const fetchSteamAchievements = useCallback(async () => {
+        if (!steam.steamId) {
+            const { data } = await axios.get(`${API_BASE_URL}/api/users/me`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            setSteamId(data.platforms.steam.steamId);
+        }
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/steam/achievements`, {
+                params: {
+                    steamid: steam.steamId || steamId,
+                    appid: appid
+                }
+            });
+
+            const achievements = response.data.map(ach => ({
+                key: ach.apiname,
+                name: ach.name,
+                icon: ach.icon,
+                description: ach.description,
+                achieved: ach.achieved,
+                unlocktime: ach.unlocktime
+            }));
+
+            dispatch(updateGames({
+                platform: 'steam',
+                achievements
+            }));
+
+            setSteamData(achievements);
+            setOriginalSteamData(achievements);
+        } catch (error) {
+            console.error('获取Steam成就失败:', error);
+            messageApi.error('获取成就数据失败');
+        }
+    }, [appid, steam.steamId, messageApi, dispatch, steamId, token]);
 
     // 从 API 中获取类别
     const fetchCategories = useCallback(async () => {
@@ -119,9 +174,15 @@ const Illustrations = React.memo(() => {
             setLoadingCategories(false);
         }
     }, [messageApi]);
+
+    // 根据模式决定数据加载
     useEffect(() => {
-        fetchCategories();
-    }, [fetchCategories]);
+        if (gameType === 'steam') {
+            fetchSteamAchievements();
+        } else {
+            fetchCategories();
+        }
+    }, [fetchCategories, fetchSteamAchievements, gameType]);
 
     // 当 activeKey 改变时获取图鉴
     const fetchIllustrations = useCallback(async () => {
@@ -204,7 +265,7 @@ const Illustrations = React.memo(() => {
         }
     }, [activeKey, username, messageApi]);
 
-    // 表格列定义
+    // 默认游戏表格列定义
     const columns = useMemo(() => [
         {
             title: '名称',
@@ -238,6 +299,44 @@ const Illustrations = React.memo(() => {
         },
     ], [username, switchOnChange]);
 
+    // Steam 模式列定义
+    const steamColumns = useMemo(() => [
+        {
+            title: '成就名称',
+            dataIndex: 'name',
+            key: 'name',
+        },
+        {
+            title: '图标',
+            dataIndex: 'icon',
+            key: 'icon',
+            render: (url) => <img src={url} alt="成就图标" style={{ width: 50 }} />,
+        },
+        {
+            title: '描述',
+            dataIndex: 'description',
+            key: 'description',
+        },
+        {
+            title: '状态',
+            key: 'status',
+            render: (_, record) => (
+                <span style={{ color: record.achieved ? 'green' : 'red' }}>
+                    {record.achieved ? '✅ 已解锁' : '❌ 未解锁'}
+                </span>
+            ),
+        },
+        {
+            title: '解锁时间',
+            key: 'unlocktime',
+            render: (_, record) => (
+                record.achieved ?
+                    new Date(record.unlocktime * 1000).toLocaleDateString() :
+                    '--'
+            ),
+        }
+    ], []);
+
     // 根据获取的数据动态创建标签项
     const tabItems = useMemo(() => categories.map((category) => ({
         label: category.tab,
@@ -259,33 +358,41 @@ const Illustrations = React.memo(() => {
     };
 
     // 搜索输入 onchange 处理程序
-    const handleSearch = () => {
-        const searchValue = inputRef.current.value.trim().toLowerCase();
+    const handleSearch = useCallback((searchValue) => {
+        const lowerVal = searchValue.toLowerCase().trim();
 
-        if (!searchValue) {
-            // 如果搜索输入为空，则重置为原始列表
-            setListData((prev) => ({
-                ...prev,
-                [activeKey]: [...(originalListData[activeKey] || [])],
-            }));
-            return;
-        }
-
-        const filteredData = (originalListData[activeKey] || []).filter((item) =>
-            item.name.toLowerCase().includes(searchValue)
-        );
-        if (filteredData.length > 0) {
-            setListData((prev) => ({
-                ...prev,
-                [activeKey]: filteredData,
-            }));
+        if (gameType === 'steam') {
+            const filtered = originalSteamData.filter(item =>
+                item.name.toLowerCase().includes(lowerVal) ||
+                item.description.toLowerCase().includes(lowerVal)
+            );
+            setSteamData(filtered);
         } else {
-            setListData((prev) => ({
-                ...prev,
-                [activeKey]: [],
-            }));
+            if (!searchValue) {
+                // 如果搜索输入为空，则重置为原始列表
+                setListData((prev) => ({
+                    ...prev,
+                    [activeKey]: [...(originalListData[activeKey] || [])],
+                }));
+                return;
+            }
+
+            const filteredData = (originalListData[activeKey] || []).filter((item) =>
+                item.name.toLowerCase().includes(searchValue)
+            );
+            if (filteredData.length > 0) {
+                setListData((prev) => ({
+                    ...prev,
+                    [activeKey]: filteredData,
+                }));
+            } else {
+                setListData((prev) => ({
+                    ...prev,
+                    [activeKey]: [],
+                }));
+            }
         }
-    };
+    }, [activeKey, gameType, originalListData, originalSteamData]);
 
     // 分类完成提示
     useEffect(() => {
@@ -302,6 +409,30 @@ const Illustrations = React.memo(() => {
         }
     }, [listData, activeKey, messageApi, originalListData]);
 
+    // 渲染内容
+    const renderContent = () => {
+        if (gameType === 'steam') {
+            return (
+                <Table
+                    columns={steamColumns}
+                    dataSource={steamData}
+                    pagination={{ pageSize: 10 }}
+                    rowKey="key"
+                    scroll={{ x: true }}
+                />
+            );
+        }
+        // 默认游戏
+        return (
+            <Tabs
+                items={tabItems}
+                activeKey={activeKey}
+                onChange={tabOnChange}
+                type="card"
+            />
+        )
+    };
+
     return (
         <IllustrationsContainer>
             <div className='searchBar'>
@@ -310,19 +441,13 @@ const Illustrations = React.memo(() => {
                 <input
                     placeholder="输入名称可模糊搜索哦"
                     className="searchInput"
-                    ref={inputRef}
-                    onChange={handleSearch} // 根据用户输入动态更新列表
+                    onChange={(e) => handleSearch(e.target.value)} // 根据用户输入动态更新列表
                 />
             </div>
-            {loadingCategories ? (
-                <Spin size="large" data-testid="loading-spinner" />
+            {loadingCategories && gameType !== 'steam' ? (
+                <Spin size="large" />
             ) : (
-                <Tabs
-                    items={tabItems}
-                    activeKey={activeKey}
-                    onChange={tabOnChange}
-                    type="card"
-                />
+                renderContent()
             )}
         </IllustrationsContainer>
     );
